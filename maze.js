@@ -1,9 +1,11 @@
 var ctxs, wid, hei, cols, rows, mazes, stacks = [], start = [{x:-1, y:-1}, {x:-1, y:-1}], end = [{x:-1, y:-1}, {x:-1, y:-1}],grid = 8, padding = 16, s, density=0.5, count=2;
+//var mazeType = document.getElementById("sltType").value;
+//根据mazes[index]的参数来绘画出整个地图。模拟一帧一帧的调度
 function drawMaze(index) {
     for( var i = 0; i < cols; i++ ) {
         for( var j = 0; j < rows; j++ ) {
             switch( mazes[index][i][j] ) {
-                case 0: ctxs[index].fillStyle = "black"; break;
+                case 0: ctxs[index].fillStyle = "black"; break; //
                 case 1: ctxs[index].fillStyle = "gray"; break;
                 case 2: ctxs[index].fillStyle = "red"; break;
                 case 3: ctxs[index].fillStyle = "yellow"; break;
@@ -15,7 +17,7 @@ function drawMaze(index) {
         }
     }
 }
-
+//绘画砖块
 function drawBlock(ctx, sx, sy, a) {
     switch( a ) {
         case 0: ctx.fillStyle = "black"; break;
@@ -28,24 +30,45 @@ function drawBlock(ctx, sx, sy, a) {
     }
     ctx.fillRect( grid * sx, grid * sy, grid, grid  );
 }
-
+//获得F的某个特定的临近格子
 function getFNeighbours( index, sx, sy, a ) {
     var n = [];
-    if( sx - 1 > 0 && mazes[index][sx - 1][sy] % 8 == a ) {
+    var mazeType = document.getElementById("sltType").value;
+    if( sx - 1 >= 0 && mazes[index][sx - 1][sy] % 8 == a ) {
         n.push( { x:sx - 1, y:sy } );
     }
-    if( sx + 1 < cols - 1 && mazes[index][sx + 1][sy] % 8 == a ) {
+    if( sx + 1 <= cols - 1 && mazes[index][sx + 1][sy] % 8 == a ) {
         n.push( { x:sx + 1, y:sy } );
     }
-    if( sy - 1 > 0 && mazes[index][sx][sy - 1] % 8 == a ) {
+    if( sy - 1 >= 0 && mazes[index][sx][sy - 1] % 8 == a ) {
         n.push( { x:sx, y:sy - 1 } );
     }
-    if( sy + 1 < rows - 1 && mazes[index][sx][sy + 1] % 8 == a ) {
+    if( sy + 1 <= rows - 1 && mazes[index][sx][sy + 1] % 8 == a ) {
         n.push( { x:sx, y:sy + 1 } );
     }
-    return n;
-}
+    if(mazeType == "Maze2"){
+        if(sx - 1 >= 0){
+            if(sy - 1 >= 0 && mazes[index][sx - 1][sy - 1] %  8 == a){
+                n.push( { x:sx - 1, y:sy - 1} );
+            }
+            if(sy + 1 <= rows - 1 && mazes[index][sx - 1][sy + 1] % 8 == a ){
+                n.push( { x:sx - 1, y:sy + 1} );
+            }
+        }
+        if(sx + 1 <= cols - 1){
+            if(sy - 1 >= 0 && mazes[index][sx + 1][sy - 1] %  8 == a){
+                n.push( { x:sx + 1, y:sy - 1} );
+            }
+            if(sy + 1 <= rows - 1 && mazes[index][sx + 1][sy + 1] % 8 == a ){
+                n.push( { x:sx + 1, y:sy + 1} );
+            }
+        }
 
+    }
+    return n;
+
+}
+//获得F的某个特定的临近格子2
 function getFNeighboursNew(index, sx, sy, a) {
 
     var n = [];
@@ -179,7 +202,7 @@ function getFNeighboursNew(index, sx, sy, a) {
 
     return n; 
 }
-
+//maze1的解决函数 运用了递归的写法（dfs）
 function solveMaze1(index) {
     if( start[index].x == end[index].x && start[index].y == end[index].y ) {
         for( var i = 0; i < cols; i++ ) {
@@ -207,7 +230,7 @@ function solveMaze1(index) {
         solveMaze1(index);
     } );
 }
-
+//maze2的解决函数 运用了递归的写法（dfs）
 function solveMaze1New(index) {
 
     if( start[index].x == end[index].x && start[index].y == end[index].y ) {
@@ -236,10 +259,43 @@ function solveMaze1New(index) {
         solveMaze1New(index);
     } );
 }
+//solveMaze2 第一种解法采用上述的dfs
+function solveMaze2(index) {
+    if( start[index].x == end[index].x && start[index].y == end[index].y ) {
+        for( var i = 0; i < cols; i++ ) {
+            for( var j = 0; j < rows; j++ ) {
+                switch( mazes[index][i][j] ) {
+                    case 2: mazes[index][i][j] = 3; break;
+                }
+            }
+        }
+        drawMaze(index);
+        return;
+    }
+    var neighbours = getFNeighbours( 0, start[index].x, start[index].y, 0 );
+    if( neighbours.length ) {
+        stacks[index].push( start[index] );
+        start[index] = neighbours[0];
+        mazes[index][start[index].x][start[index].y] = 2;
+    } else {
+        mazes[index][start[index].x][start[index].y] = 4;
+        start[index] = stacks[index].pop();
+    }
 
+    drawMaze(index);
+    requestAnimationFrame( function() {
+        solveMaze1(index);
+    } );
+}
+//solveMaze2 第二种解法采用A*
+function solveMaze2New(index) {
+
+}
+//点击事件，能够获取当前的光标点击的地点。
 function getCursorPos( event ) {
     var rect = this.getBoundingClientRect();
-    var x = Math.floor( ( event.clientX - rect.left ) / grid / s), 
+    var mazeType = document.getElementById("sltType").value;
+    var x = Math.floor( ( event.clientX - rect.left ) / grid / s),
         y = Math.floor( ( event.clientY - rect.top  ) / grid / s);
     
     if(end[0].x != -1) {
@@ -261,11 +317,17 @@ function getCursorPos( event ) {
         end[1] = { x: x, y: y };
         mazes[0][end[0].x][end[0].y] = 8;
         mazes[1][end[1].x][end[1].y] = 8;
-        solveMaze1(0);
-        solveMaze1New(1);
+        if(mazeType == "Maze1"){
+            solveMaze1(0);
+            solveMaze1New(1);
+        }
+        if(mazeType ==  "Maze2"){
+            solveMaze2(0);
+            solveMaze2New(1);
+        }
     }
 }
-
+//又是一个获取附近的格子？
 function getNeighbours( index, sx, sy, a ) {
     var n = [];
     if( sx - 1 > 0 && mazes[index][sx - 1][sy] == a && sx - 2 > 0 && mazes[index][sx - 2][sy] == a ) {
@@ -282,7 +344,7 @@ function getNeighbours( index, sx, sy, a ) {
     }
     return n;
 }
-
+// 创建一个3维数组？然后全部搞成1？count：第几个解法  c：长  r：宽
 function createArray( c, r ) {
     var m = new Array( count );
     for( var i = 0; i < count; i++ ) {
@@ -296,7 +358,7 @@ function createArray( c, r ) {
     }
     return m;
 }
-
+// Maze1的构建过程
 function createMaze1() {
     var neighbours = getNeighbours( 0, start[0].x, start[0].y, 1 ), l;
     if( neighbours.length < 1 ) {
@@ -337,7 +399,7 @@ function createMaze1() {
     
     requestAnimationFrame( createMaze1 );
 }
-
+// 没有动画的构建过程
 function createMaze1NonAni(ctx) {
 
     while(true) {
@@ -382,7 +444,7 @@ function createMaze1NonAni(ctx) {
     }
     document.getElementById("btnCreateMaze").removeAttribute("disabled");
 }
-
+// 动画2的构建过程
 function createMaze2(ctx) {
 
     var r = Math.random();
@@ -407,7 +469,7 @@ function createMaze2(ctx) {
 
     requestAnimationFrame(createMaze2);
 }
-
+// 没有动画的Maze2的构建过程
 function createMaze2NonAni() {
 
     for(var i = 0; i < cols; i++){
@@ -423,7 +485,7 @@ function createMaze2NonAni() {
 
     document.getElementById("btnCreateMaze").removeAttribute("disabled");
 }
-
+// 创建这个画布
 function createCanvas(count) {
 
     ctxs = new Array(count);
@@ -446,11 +508,11 @@ function createCanvas(count) {
         ctxs[i].fillRect( 0, 0, wid, hei );
     }
 }
-
+// 初始化
 function init() {
     createCanvas(count);
 }
-
+// 创建
 function onCreate() {
 
     stacks = new Array(count);
@@ -471,6 +533,10 @@ function onCreate() {
         cols = cols + 1 - cols % 2;
         rows = rows + 1 - rows % 2;    
     }
+    // if(mazeType == "Maze1") {
+    //     cols = cols + 1 - cols % 2;
+    //     rows = rows + 1 - rows % 2;
+    // }
 
     mazes = createArray( cols, rows );
 
@@ -504,7 +570,8 @@ function onCreate() {
             createMaze1NonAni();
         }
     }
-    else {
+    if(mazeType == "Maze2")
+    {
 
         density = document.getElementById("density").value / 100;
         start[0].x = 0;
@@ -520,7 +587,7 @@ function onCreate() {
         }
     }
 }
-
+// 这个是干啥的 至今为知
 function onSltType() {
     if(document.getElementById("sltType").value == "Maze2") {
         document.getElementById("density").removeAttribute("disabled");
@@ -529,7 +596,7 @@ function onSltType() {
         document.getElementById("density").setAttribute("disabled", "disabled");
     }
 }
-
+// 清空
 function onClear() {
     
     for(var i = 0; i < count; i++){
@@ -557,6 +624,6 @@ function onClear() {
     start[1].x = start[1].y = -1;
 
     end[0].x = end[0].y = -1;
-    end[0].x = end[0].y = -1;
+    end[1].x = end[1].y = -1;
 
 }
